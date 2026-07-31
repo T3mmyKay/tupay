@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Domain\Security\ElevatedActionTokenService;
 use App\Domain\Security\InvalidElevatedActionToken;
 use App\Domain\Swap\FxRateUnavailable;
-use App\Domain\Swap\InsufficientFunds;
 use App\Domain\Swap\InvalidSwap;
 use App\Domain\Swap\ResourceBusy;
 use App\Domain\Swap\SwapService;
@@ -43,10 +42,10 @@ class SwapController extends Controller
             return response()->json(['message' => $exception->getMessage()], 401);
         } catch (ResourceBusy $exception) {
             return response()->json(['message' => $exception->getMessage()], 409);
-        } catch (InsufficientFunds|InvalidSwap $exception) {
-            return response()->json(['message' => $exception->getMessage()], 422);
         } catch (FxRateUnavailable $exception) {
             return response()->json(['message' => $exception->getMessage()], 503);
+        } catch (InvalidSwap $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
         }
 
         return response()->json([
