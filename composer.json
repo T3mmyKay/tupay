@@ -45,7 +45,7 @@
             "@php artisan vendor:publish --tag=laravel-assets --ansi --force"
         ],
         "analyse": "phpstan analyse --memory-limit=1G",
-        "audit": "composer audit --format=summary",
+        "security-audit": "composer audit --format=summary",
         "format": "pint",
         "test": "phpunit"
     },
