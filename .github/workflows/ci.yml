@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -65,6 +65,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -80,17 +82,24 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      - name: Upload generated Composer lock
-        if: ${{ hashFiles('composer.lock') != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: composer-lock
-          path: composer.lock
-          if-no-files-found: error
-
       - name: Report dependency advisories
         continue-on-error: true
         run: composer audit --format=summary
+
+      - name: Apply Laravel Pint
+        run: vendor/bin/pint
+
+      - name: Commit generated lock and Pint formatting
+        if: github.event_name == 'pull_request'
+        run: |
+          git add composer.lock app bootstrap config database public routes tests
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "style: apply Laravel Pint and lock dependencies"
+          git push origin HEAD:${GITHUB_HEAD_REF}
 
       - name: Configure application
         run: |
@@ -101,7 +110,7 @@ jobs:
       - name: Migrate and seed
         run: php artisan migrate:fresh --seed --force
 
-      - name: Laravel Pint
+      - name: Laravel Pint verification
         run: vendor/bin/pint --test
 
       - name: PHPStan level 8
