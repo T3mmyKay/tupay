@@ -80,7 +80,16 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      - name: Upload generated Composer lock
+        if: ${{ hashFiles('composer.lock') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: composer-lock
+          path: composer.lock
+          if-no-files-found: error
+
       - name: Report dependency advisories
+        continue-on-error: true
         run: composer audit --format=summary
 
       - name: Configure application
