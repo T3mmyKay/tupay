@@ -7,14 +7,21 @@ use App\Http\Controllers\Api\StepUpChallengeController;
 use App\Http\Controllers\Api\SwapController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/health', static fn (): array => ['status' => 'ok']);
+$registerApiRoutes = static function (): void {
+    Route::get('/health', static fn (): array => ['data' => ['status' => 'ok']]);
 
-Route::post('/login', LoginController::class)->middleware('throttle:login');
-Route::post('/webhooks/settlement', SettlementWebhookController::class)
-    ->middleware('settlement.signature');
+    Route::post('/login', LoginController::class)->middleware('throttle:login');
+    Route::post('/webhooks/settlement', SettlementWebhookController::class)
+        ->middleware(['settlement.signature', 'throttle:webhooks']);
 
-Route::middleware('auth:sanctum')->group(function (): void {
-    Route::post('/2fa/challenge', StepUpChallengeController::class)->middleware('throttle:financial');
-    Route::post('/swap', SwapController::class)->middleware('throttle:financial');
-    Route::get('/ledger/{walletId}', LedgerController::class);
-});
+    Route::middleware('auth:sanctum')->group(function (): void {
+        Route::post('/2fa/challenge', StepUpChallengeController::class)->middleware('throttle:financial');
+        Route::post('/swap', SwapController::class)->middleware('throttle:financial');
+        Route::get('/ledger/{walletId}', LedgerController::class)->middleware('throttle:read');
+    });
+};
+
+Route::prefix('v1')->name('api.v1.')->group($registerApiRoutes);
+
+// Assessment-compatible aliases. New clients must use /api/v1; these routes emit deprecation headers.
+Route::middleware('api.deprecated')->group($registerApiRoutes);
