@@ -24,7 +24,7 @@ final class DistributedLockManager
 
         try {
             foreach ($keys as $key) {
-                $lock = Cache::store('redis')->lock($key, 10);
+                $lock = Cache::lock($key, 10);
                 if (! $lock->get()) {
                     throw new ResourceBusy('A conflicting financial operation is already in progress.');
                 }
