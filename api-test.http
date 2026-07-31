@@ -1,0 +1,74 @@
+@baseUrl = http://localhost:8000
+@token = paste-sanctum-token
+@eat = paste-elevated-action-token
+@sourceWalletId = paste-ngn-wallet-id
+@destinationWalletId = paste-cny-wallet-id
+@totp = paste-current-six-digit-totp
+@providerReference = paste-provider-reference
+@webhookSignature = paste-hmac-sha256-of-exact-json-body
+
+### Login
+POST {{baseUrl}}/api/login
+Accept: application/json
+Content-Type: application/json
+
+{
+  "email": "candidate@tupay.test",
+  "password": "password"
+}
+
+### Create a single-use action-bound EAT
+POST {{baseUrl}}/api/2fa/challenge
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "totp_code": "{{totp}}",
+  "action_payload": {
+    "action": "swap",
+    "source_wallet_id": "{{sourceWalletId}}",
+    "destination_wallet_id": "{{destinationWalletId}}",
+    "amount_subunits": 100000000
+  }
+}
+
+### Execute swap
+POST {{baseUrl}}/api/swap
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Elevated-Action-Token: {{eat}}
+
+{
+  "source_wallet_id": "{{sourceWalletId}}",
+  "destination_wallet_id": "{{destinationWalletId}}",
+  "amount_subunits": 100000000
+}
+
+### Replay the same EAT: expected 401
+POST {{baseUrl}}/api/swap
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Elevated-Action-Token: {{eat}}
+
+{
+  "source_wallet_id": "{{sourceWalletId}}",
+  "destination_wallet_id": "{{destinationWalletId}}",
+  "amount_subunits": 100000000
+}
+
+### Read wallet ledger
+GET {{baseUrl}}/api/ledger/{{sourceWalletId}}?per_page=20
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### Settlement webhook
+# Compute HMAC-SHA256 over the exact compact JSON body with SETTLEMENT_WEBHOOK_SECRET.
+POST {{baseUrl}}/api/webhooks/settlement
+Accept: application/json
+Content-Type: application/json
+X-Tupay-Signature: {{webhookSignature}}
+
+{"provider_reference":"{{providerReference}}","status":"COMPLETED"}
