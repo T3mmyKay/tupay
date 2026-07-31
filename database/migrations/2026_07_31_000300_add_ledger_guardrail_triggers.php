@@ -8,6 +8,21 @@ return new class extends Migration
     public function up(): void
     {
         DB::unprepared(<<<'SQL'
+CREATE OR REPLACE FUNCTION reject_ledger_entry_mutation()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RAISE EXCEPTION 'Ledger entries are immutable; post a compensating transaction instead'
+        USING ERRCODE = '23514';
+END;
+$$;
+
+CREATE TRIGGER ledger_entries_immutable_guard
+BEFORE UPDATE OR DELETE ON ledger_entries
+FOR EACH ROW
+EXECUTE FUNCTION reject_ledger_entry_mutation();
+
 CREATE OR REPLACE FUNCTION validate_ledger_entry_currency()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -165,6 +180,8 @@ DROP FUNCTION IF EXISTS enforce_ledger_entry_balance();
 DROP FUNCTION IF EXISTS assert_ledger_transaction_balanced(uuid);
 DROP TRIGGER IF EXISTS ledger_entry_currency_guard ON ledger_entries;
 DROP FUNCTION IF EXISTS validate_ledger_entry_currency();
+DROP TRIGGER IF EXISTS ledger_entries_immutable_guard ON ledger_entries;
+DROP FUNCTION IF EXISTS reject_ledger_entry_mutation();
 SQL);
     }
 };
