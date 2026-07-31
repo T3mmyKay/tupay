@@ -52,7 +52,7 @@ class SwapController extends Controller
             'data' => [
                 'id' => (string) $swap->getKey(),
                 'provider_reference' => $swap->provider_reference,
-                'status' => $swap->status->value,
+                'status' => $swap->statusEnum()->value,
                 'source_amount_subunits' => $swap->source_amount_subunits,
                 'destination_amount_subunits' => $swap->destination_amount_subunits,
                 'quoted_rate' => $swap->quoted_rate,
