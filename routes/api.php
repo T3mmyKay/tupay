@@ -23,7 +23,7 @@ $registerApiRoutes = static function (): void {
 
 Route::prefix('v1')->name('api.v1.')->group($registerApiRoutes);
 
-// Assessment-compatible aliases. New clients must use /api/v1; these routes emit deprecation headers.
-Route::middleware('api.deprecated')->group($registerApiRoutes);
+// Original assessment paths preserve their request and response contracts while advertising v1.
+Route::middleware(['api.deprecated', 'api.legacy'])->group($registerApiRoutes);
 
 Route::fallback(static fn () => abort(404));
