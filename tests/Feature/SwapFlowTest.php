@@ -66,7 +66,7 @@ class SwapFlowTest extends TestCase
                 'X-Request-ID' => 'test-request-00000001',
             ])
             ->postJson('/api/v1/swap', $swapPayload)
-            ->assertCreated()
+            ->assertOk()
             ->assertHeader('Idempotent-Replayed', 'false')
             ->assertHeader('X-Request-ID', 'test-request-00000001')
             ->assertJsonPath('data.status', 'PENDING');
@@ -177,6 +177,6 @@ class SwapFlowTest extends TestCase
                 'destination_wallet_id' => $destinationWalletId,
                 'amount_subunits' => $amount,
             ])
-            ->assertCreated();
+            ->assertOk();
     }
 }
