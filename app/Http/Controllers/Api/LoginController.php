@@ -6,7 +6,6 @@ use App\Domain\Ledger\WalletBalanceService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Models\User;
-use App\Models\Wallet;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -30,10 +29,6 @@ class LoginController extends Controller
         $wallets = [];
 
         foreach ($user->wallets()->orderBy('currency')->get() as $wallet) {
-            if (! $wallet instanceof Wallet) {
-                continue;
-            }
-
             $wallets[] = [
                 'id' => (string) $wallet->getKey(),
                 'currency' => $wallet->currencyEnum()->value,
