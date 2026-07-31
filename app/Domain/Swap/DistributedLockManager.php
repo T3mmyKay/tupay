@@ -10,8 +10,9 @@ final class DistributedLockManager
 {
     /**
      * @template T
-     * @param list<string> $keys
-     * @param callable(): T $callback
+     *
+     * @param  list<string>  $keys
+     * @param  callable(): T  $callback
      * @return T
      */
     public function withLocks(array $keys, callable $callback): mixed

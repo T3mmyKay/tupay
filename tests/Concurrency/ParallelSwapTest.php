@@ -42,7 +42,7 @@ class ParallelSwapTest extends TestCase
         $sourceWalletId = $this->walletId($loginData['wallets'], 'NGN');
         $destinationWalletId = $this->walletId($loginData['wallets'], 'CNY');
         $amount = 100_000_000;
-        $totp = (new Google2FA())->getCurrentOtp('JBSWY3DPEHPK3PXP');
+        $totp = (new Google2FA)->getCurrentOtp('JBSWY3DPEHPK3PXP');
 
         $actionPayload = [
             'action' => 'swap',
@@ -126,7 +126,7 @@ class ParallelSwapTest extends TestCase
     }
 
     /**
-     * @param list<array{id: string, currency: string}> $wallets
+     * @param  list<array{id: string, currency: string}>  $wallets
      */
     private function walletId(array $wallets, string $currency): string
     {

@@ -8,8 +8,7 @@ final class SwapQuoteService
         private readonly FxRateService $rates,
         private readonly SlippageCalculator $slippage,
         private readonly BankersRounding $rounding,
-    ) {
-    }
+    ) {}
 
     public function quoteNgnToCny(int $sourceAmountSubunits): SwapQuote
     {

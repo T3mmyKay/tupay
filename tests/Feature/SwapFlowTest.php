@@ -38,7 +38,7 @@ class SwapFlowTest extends TestCase
         $amount = 100_000_000;
 
         $user = User::query()->where('email', 'candidate@tupay.test')->firstOrFail();
-        $totp = (new Google2FA())->getCurrentOtp($user->totp_secret);
+        $totp = (new Google2FA)->getCurrentOtp($user->totp_secret);
         $actionPayload = [
             'action' => 'swap',
             'source_wallet_id' => $sourceWalletId,

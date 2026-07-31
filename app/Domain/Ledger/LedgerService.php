@@ -13,8 +13,8 @@ use LogicException;
 final class LedgerService
 {
     /**
-     * @param list<array{wallet: Wallet, amount_subunits: int}> $postings
-     * @param array<string, mixed> $metadata
+     * @param  list<array{wallet: Wallet, amount_subunits: int}>  $postings
+     * @param  array<string, mixed>  $metadata
      */
     public function post(
         LedgerTransactionType $type,

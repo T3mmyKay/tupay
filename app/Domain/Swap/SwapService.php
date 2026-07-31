@@ -22,8 +22,7 @@ final class SwapService
         private readonly SwapQuoteService $quotes,
         private readonly WalletBalanceService $balances,
         private readonly LedgerService $ledger,
-    ) {
-    }
+    ) {}
 
     public function execute(User $user, string $sourceWalletId, string $destinationWalletId, int $amountSubunits): Swap
     {
