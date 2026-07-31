@@ -6,6 +6,7 @@ use App\Enums\SwapStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use LogicException;
 
 class Swap extends Model
 {
@@ -35,6 +36,43 @@ class Swap extends Model
             'spread_basis_points' => 'integer',
             'status' => SwapStatus::class,
         ];
+    }
+
+    public function statusEnum(): SwapStatus
+    {
+        $status = $this->getAttribute('status');
+
+        if ($status instanceof SwapStatus) {
+            return $status;
+        }
+
+        if (is_string($status)) {
+            return SwapStatus::from($status);
+        }
+
+        throw new LogicException('Swap status is invalid.');
+    }
+
+    public function destinationWalletId(): string
+    {
+        return (string) $this->getAttribute('destination_wallet_id');
+    }
+
+    public function destinationAmountSubunits(): int
+    {
+        return (int) $this->getAttribute('destination_amount_subunits');
+    }
+
+    public function providerReference(): string
+    {
+        return (string) $this->getAttribute('provider_reference');
+    }
+
+    public function settlementLedgerTransactionId(): ?string
+    {
+        $transactionId = $this->getAttribute('settlement_ledger_transaction_id');
+
+        return is_string($transactionId) ? $transactionId : null;
     }
 
     /** @return BelongsTo<User, $this> */
