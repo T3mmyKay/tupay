@@ -7,6 +7,7 @@ return [
     ],
     'settlement' => [
         'webhook_secret' => env('SETTLEMENT_WEBHOOK_SECRET'),
+        'webhook_tolerance_seconds' => (int) env('SETTLEMENT_WEBHOOK_TOLERANCE_SECONDS', 300),
     ],
     'fx' => [
         'url' => env('FX_RATE_URL'),
