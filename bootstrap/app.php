@@ -77,6 +77,7 @@ return Application::configure(basePath: dirname(__DIR__))
                     $request,
                     403,
                     'FORBIDDEN',
+                    'Forbidden',
                     'The authenticated user is not allowed to perform this action.',
                 ),
                 $exception instanceof ModelNotFoundException,
@@ -128,6 +129,8 @@ return Application::configure(basePath: dirname(__DIR__))
                     'RATE_LIMIT_EXCEEDED',
                     'Too many requests',
                     'The request rate limit has been exceeded. Retry after the indicated interval.',
+                    [],
+                    $exception->getHeaders(),
                 ),
                 $exception instanceof HttpExceptionInterface => ProblemDetails::response(
                     $request,
