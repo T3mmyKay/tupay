@@ -25,3 +25,5 @@ Route::prefix('v1')->name('api.v1.')->group($registerApiRoutes);
 
 // Assessment-compatible aliases. New clients must use /api/v1; these routes emit deprecation headers.
 Route::middleware('api.deprecated')->group($registerApiRoutes);
+
+Route::fallback(static fn () => abort(404));
