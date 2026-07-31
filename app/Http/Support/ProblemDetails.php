@@ -10,6 +10,7 @@ final class ProblemDetails
 {
     /**
      * @param  array<string, list<string>>  $errors
+     * @param  array<string, string|list<string>>  $headers
      */
     public static function response(
         Request $request,
@@ -18,6 +19,7 @@ final class ProblemDetails
         string $title,
         string $detail,
         array $errors = [],
+        array $headers = [],
     ): JsonResponse {
         $requestId = $request->attributes->get('request_id');
         if (! is_string($requestId) || $requestId === '') {
@@ -41,10 +43,10 @@ final class ProblemDetails
         return response()->json(
             $payload,
             $status,
-            [
+            array_merge($headers, [
                 'Content-Type' => 'application/problem+json',
                 'X-Request-ID' => $requestId,
-            ],
+            ]),
         );
     }
 }

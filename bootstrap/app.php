@@ -7,9 +7,7 @@ use App\Domain\Swap\InsufficientFunds;
 use App\Domain\Swap\InvalidSwap;
 use App\Domain\Swap\ResourceBusy;
 use App\Http\Middleware\AddApiSecurityHeaders;
-use App\Http\Middleware\AddDeprecationHeaders;
 use App\Http\Middleware\AssignRequestId;
-use App\Http\Middleware\RestoreLegacyApiEnvelope;
 use App\Http\Middleware\VerifySettlementSignature;
 use App\Http\Support\ProblemDetails;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -39,8 +37,6 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
-            'api.deprecated' => AddDeprecationHeaders::class,
-            'api.legacy' => RestoreLegacyApiEnvelope::class,
             'settlement.signature' => VerifySettlementSignature::class,
         ]);
     })
@@ -133,6 +129,8 @@ return Application::configure(basePath: dirname(__DIR__))
                     'RATE_LIMIT_EXCEEDED',
                     'Too many requests',
                     'The request rate limit has been exceeded. Retry after the indicated interval.',
+                    [],
+                    $exception->getHeaders(),
                 ),
                 $exception instanceof HttpExceptionInterface => ProblemDetails::response(
                     $request,

@@ -26,22 +26,9 @@ class SwapRequest extends FormRequest
     {
         $key = $this->header('Idempotency-Key');
 
-        if (! is_string($key) || $key === '') {
-            if (! $this->is('api/v1/*')) {
-                $requestId = $this->attributes->get('request_id');
-                $seed = is_string($requestId) && $requestId !== '' ? $requestId : (string) microtime(true);
-
-                return 'legacy-'.hash('sha256', $seed);
-            }
-
+        if (! is_string($key) || preg_match('/^[A-Za-z0-9._:-]{8,100}$/', $key) !== 1) {
             throw ValidationException::withMessages([
                 'idempotency_key' => ['The Idempotency-Key header is required and must contain 8 to 100 safe characters.'],
-            ]);
-        }
-
-        if (preg_match('/^[A-Za-z0-9._:-]{8,100}$/', $key) !== 1) {
-            throw ValidationException::withMessages([
-                'idempotency_key' => ['The Idempotency-Key header must contain 8 to 100 safe characters.'],
             ]);
         }
 

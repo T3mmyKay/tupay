@@ -8,7 +8,7 @@ A security-first Laravel backend for NGN-to-CNY transfer orchestration. The impl
 - Laravel 11.55 and Sanctum
 - Scramble-generated OpenAPI 3.1 documentation
 - PostgreSQL 16
-- Redis 7 for cache, queues, distributed locks, idempotency serialization, and one-time EAT state
+- Redis 7 for cache, queues, distributed locks, rate limiting, idempotency serialization, and one-time EAT state
 - BCMath for arbitrary-precision conversion math
 - PHPUnit 11
 - Larastan/PHPStan level 8
@@ -45,7 +45,7 @@ The fixed password and TOTP secret exist only for deterministic local and CI ver
 
 ## API documentation and versioning
 
-The canonical contract is versioned under `/api/v1`:
+The only public application API is versioned under `/api/v1`. Unversioned `/api/*` application routes are intentionally not registered and return `404`.
 
 - Interactive documentation: `GET /docs/api`
 - OpenAPI 3.1 JSON: `GET /docs/api.json`
@@ -53,9 +53,7 @@ The canonical contract is versioned under `/api/v1`:
 
 Scramble derives request schemas from Form Requests, response schemas from API Resources, route authentication from middleware, and explicitly declared financial/webhook headers from controller attributes. CI exports the specification and fails when the OpenAPI version or required paths are missing.
 
-The original assessment paths under `/api/*` remain available as compatibility aliases. They return `Deprecation`, `Sunset`, and successor-version `Link` headers. New integrations must use `/api/v1/*`.
-
-## Canonical API flow
+## API flow
 
 1. `POST /api/v1/login` returns a Sanctum bearer token and current wallet balances.
 2. `POST /api/v1/2fa/challenge` verifies TOTP and the exact financial `action_payload`.
@@ -128,12 +126,12 @@ CORS origins are allow-listed through `CORS_ALLOWED_ORIGINS`; credentials and wi
 
 Rate limits are separated by risk:
 
-- login: per email/IP fingerprint plus an hourly IP ceiling;
-- financial writes: per authenticated user;
-- ledger reads: higher per-user read budget;
-- provider webhooks: per source IP.
+- login: 5 attempts per minute per email/IP fingerprint and 30 per hour per IP;
+- financial writes: 20 requests per minute per authenticated user;
+- ledger reads: 120 requests per minute per authenticated user;
+- provider webhooks: 120 requests per minute per source IP.
 
-Exceeded limits are returned through the same standardized problem contract.
+Exceeded limits return `429 Too Many Requests`, `Retry-After`, and the same standardized `application/problem+json` contract. The regression suite verifies the login limiter and machine-readable `RATE_LIMIT_EXCEEDED` response.
 
 ## Swap idempotency
 
@@ -288,7 +286,7 @@ app/Domain/Ledger       posting and dynamic balance services
 app/Domain/Security     action hashing and one-time EAT handling
 app/Domain/Swap         FX, locks, idempotency, and swap orchestration
 app/Http/Resources      stable public response contracts
-app/Http/Middleware     request IDs, security, deprecation, webhook HMAC
+app/Http/Middleware     request IDs, security headers, webhook HMAC
 app/Http/Support        standardized problem responses
 app/Jobs                FX refresh and settlement processing
 database/migrations     schema, checks, triggers, indexes, idempotency
