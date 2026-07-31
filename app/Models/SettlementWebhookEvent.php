@@ -13,6 +13,7 @@ class SettlementWebhookEvent extends Model
 
     /** @var list<string> */
     protected $fillable = [
+        'event_id',
         'provider_reference',
         'status',
         'idempotency_key',

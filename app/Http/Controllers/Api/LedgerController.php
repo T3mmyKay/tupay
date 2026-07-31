@@ -4,15 +4,22 @@ namespace App\Http\Controllers\Api;
 
 use App\Domain\Ledger\WalletBalanceService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\LedgerRequest;
+use App\Http\Resources\LedgerResource;
 use App\Models\LedgerEntry;
 use App\Models\User;
 use App\Models\Wallet;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use Dedoc\Scramble\Attributes\Header;
 
 class LedgerController extends Controller
 {
-    public function __invoke(Request $request, string $walletId, WalletBalanceService $balances): JsonResponse
+    /**
+     * Get wallet ledger history.
+     *
+     * Returns immutable entries using cursor pagination and a dynamically calculated balance.
+     */
+    #[Header('X-Request-ID', 'Request correlation identifier.', type: 'string', required: true)]
+    public function __invoke(LedgerRequest $request, string $walletId, WalletBalanceService $balances): LedgerResource
     {
         $user = $request->user();
         if (! $user instanceof User) {
@@ -24,19 +31,20 @@ class LedgerController extends Controller
             ->where('user_id', $user->getKey())
             ->firstOrFail();
 
+        $wallet->setAttribute('balance_subunits', $balances->balance($wallet));
+        $perPage = $request->integer('per_page', 20);
+
         $entries = LedgerEntry::query()
             ->where('wallet_id', $wallet->getKey())
             ->with('transaction:id,type,status,metadata,created_at')
             ->orderByDesc('id')
-            ->paginate(perPage: min(100, max(1, $request->integer('per_page', 20))));
+            ->cursorPaginate(perPage: $perPage);
 
-        return response()->json([
-            'wallet' => [
-                'id' => (string) $wallet->getKey(),
-                'currency' => $wallet->currencyEnum()->value,
-                'balance_subunits' => $balances->balance($wallet),
-            ],
-            'entries' => $entries,
+        return new LedgerResource([
+            'wallet' => $wallet,
+            'entries' => $entries->items(),
+            'next_cursor' => $entries->nextCursor()?->encode(),
+            'per_page' => $perPage,
         ]);
     }
 }

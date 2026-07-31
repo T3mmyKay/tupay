@@ -15,7 +15,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     services:
       postgres:
@@ -61,6 +61,8 @@ jobs:
       FX_RATE_STATIC: "0.00450000"
       EAT_SIGNING_KEY: test-eat-signing-key-at-least-thirty-two-characters
       SETTLEMENT_WEBHOOK_SECRET: test-webhook-secret
+      SETTLEMENT_WEBHOOK_TOLERANCE_SECONDS: 300
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
 
     steps:
       - name: Checkout
@@ -74,10 +76,10 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - name: Validate Composer configuration
-        run: composer validate --no-check-lock
+      - name: Validate Composer configuration and lock file
+        run: composer validate
 
-      - name: Install dependencies
+      - name: Install locked dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Report assessment-constrained dependency advisories
@@ -102,6 +104,11 @@ jobs:
       - name: Unit and integration tests
         run: vendor/bin/phpunit --exclude-group concurrency
 
+      - name: Export and validate OpenAPI 3.1 contract
+        run: |
+          php artisan scramble:export --path=storage/api-v1.json
+          php -r '$spec = json_decode(file_get_contents("storage/api-v1.json"), true, 512, JSON_THROW_ON_ERROR); if (($spec["openapi"] ?? null) !== "3.1.0") { fwrite(STDERR, "Expected OpenAPI 3.1.0\n"); exit(1); } foreach (["/login", "/2fa/challenge", "/swap", "/ledger/{walletId}", "/webhooks/settlement"] as $path) { if (!isset($spec["paths"][$path])) { fwrite(STDERR, "Missing documented path: {$path}\n"); exit(1); } }'
+
       - name: Reset state for parallel test
         run: |
           php artisan migrate:fresh --seed --force
@@ -112,7 +119,7 @@ jobs:
           PHP_CLI_SERVER_WORKERS=12 php artisan serve --host=127.0.0.1 --port=8000 > storage/logs/concurrency-server.log 2>&1 &
           echo $! > /tmp/tupay-server.pid
           for attempt in {1..30}; do
-            if curl --fail --silent http://127.0.0.1:8000/api/health > /dev/null; then
+            if curl --fail --silent http://127.0.0.1:8000/api/v1/health > /dev/null; then
               exit 0
             fi
             sleep 1

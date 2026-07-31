@@ -24,8 +24,14 @@ final class SwapService
         private readonly LedgerService $ledger,
     ) {}
 
-    public function execute(User $user, string $sourceWalletId, string $destinationWalletId, int $amountSubunits): Swap
-    {
+    public function execute(
+        User $user,
+        string $sourceWalletId,
+        string $destinationWalletId,
+        int $amountSubunits,
+        string $idempotencyKey,
+        string $requestHash,
+    ): Swap {
         $lockKeys = [
             'swap:user:'.$user->getKey(),
             'swap:wallet:'.$sourceWalletId,
@@ -35,10 +41,10 @@ final class SwapService
         $balanceService = $this->balances;
         $ledgerService = $this->ledger;
 
-        return $this->locks->withLocks($lockKeys, function () use ($user, $sourceWalletId, $destinationWalletId, $amountSubunits, $quoteService, $balanceService, $ledgerService): Swap {
+        return $this->locks->withLocks($lockKeys, function () use ($user, $sourceWalletId, $destinationWalletId, $amountSubunits, $idempotencyKey, $requestHash, $quoteService, $balanceService, $ledgerService): Swap {
             $quote = $quoteService->quoteNgnToCny($amountSubunits);
 
-            return DB::transaction(function () use ($user, $sourceWalletId, $destinationWalletId, $amountSubunits, $quote, $balanceService, $ledgerService): Swap {
+            return DB::transaction(function () use ($user, $sourceWalletId, $destinationWalletId, $amountSubunits, $idempotencyKey, $requestHash, $quote, $balanceService, $ledgerService): Swap {
                 DB::statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
 
                 $clearingId = Wallet::query()
@@ -97,6 +103,7 @@ final class SwapService
                     'user_id' => $userId,
                     'source_wallet_id' => $sourceWalletId,
                     'destination_wallet_id' => $destinationWalletId,
+                    'idempotency_key' => $idempotencyKey,
                 ]);
 
                 $swapId = (string) Str::uuid();
@@ -104,6 +111,8 @@ final class SwapService
                 return Swap::query()->create([
                     'id' => $swapId,
                     'user_id' => $userId,
+                    'idempotency_key' => $idempotencyKey,
+                    'request_hash' => $requestHash,
                     'source_wallet_id' => $sourceWalletId,
                     'destination_wallet_id' => $destinationWalletId,
                     'source_amount_subunits' => $amountSubunits,

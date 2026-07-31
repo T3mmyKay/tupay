@@ -28,7 +28,7 @@ class ParallelSwapTest extends TestCase
             'timeout' => 15,
         ]);
 
-        $login = $client->post('/api/login', [
+        $login = $client->post('/api/v1/login', [
             'json' => [
                 'email' => 'candidate@tupay.test',
                 'password' => 'password',
@@ -36,11 +36,11 @@ class ParallelSwapTest extends TestCase
         ]);
         self::assertSame(200, $login->getStatusCode(), (string) $login->getBody());
 
-        /** @var array{token: string, wallets: list<array{id: string, currency: string}>} $loginData */
+        /** @var array{data: array{token: string, wallets: list<array{id: string, currency: string}>}} $loginData */
         $loginData = json_decode((string) $login->getBody(), true, flags: JSON_THROW_ON_ERROR);
-        $bearer = $loginData['token'];
-        $sourceWalletId = $this->walletId($loginData['wallets'], 'NGN');
-        $destinationWalletId = $this->walletId($loginData['wallets'], 'CNY');
+        $bearer = $loginData['data']['token'];
+        $sourceWalletId = $this->walletId($loginData['data']['wallets'], 'NGN');
+        $destinationWalletId = $this->walletId($loginData['data']['wallets'], 'CNY');
         $amount = 100_000_000;
         $totp = (new Google2FA)->getCurrentOtp('JBSWY3DPEHPK3PXP');
 
@@ -54,7 +54,7 @@ class ParallelSwapTest extends TestCase
         /** @var list<string> $elevatedTokens */
         $elevatedTokens = [];
         for ($index = 0; $index < 10; $index++) {
-            $challenge = $client->post('/api/2fa/challenge', [
+            $challenge = $client->post('/api/v1/2fa/challenge', [
                 'headers' => ['Authorization' => 'Bearer '.$bearer],
                 'json' => [
                     'totp_code' => $totp,
@@ -63,9 +63,9 @@ class ParallelSwapTest extends TestCase
             ]);
 
             self::assertSame(200, $challenge->getStatusCode(), (string) $challenge->getBody());
-            /** @var array{elevated_action_token: string} $challengeData */
+            /** @var array{data: array{elevated_action_token: string}} $challengeData */
             $challengeData = json_decode((string) $challenge->getBody(), true, flags: JSON_THROW_ON_ERROR);
-            $elevatedTokens[] = $challengeData['elevated_action_token'];
+            $elevatedTokens[] = $challengeData['data']['elevated_action_token'];
         }
 
         $body = json_encode([
@@ -75,12 +75,14 @@ class ParallelSwapTest extends TestCase
         ], JSON_THROW_ON_ERROR);
 
         $requests = static function () use ($elevatedTokens, $bearer, $body): iterable {
-            foreach ($elevatedTokens as $token) {
-                yield new Request('POST', '/api/swap', [
+            foreach ($elevatedTokens as $index => $token) {
+                yield new Request('POST', '/api/v1/swap', [
                     'Accept' => 'application/json',
                     'Content-Type' => 'application/json',
                     'Authorization' => 'Bearer '.$bearer,
                     'X-Elevated-Action-Token' => $token,
+                    'Idempotency-Key' => sprintf('parallel-swap-%02d', $index),
+                    'X-Request-ID' => sprintf('parallel-request-%02d', $index),
                 ], $body);
             }
         };
