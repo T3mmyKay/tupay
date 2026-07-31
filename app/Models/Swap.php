@@ -15,6 +15,8 @@ class Swap extends Model
     /** @var list<string> */
     protected $fillable = [
         'user_id',
+        'idempotency_key',
+        'request_hash',
         'source_wallet_id',
         'destination_wallet_id',
         'source_amount_subunits',
