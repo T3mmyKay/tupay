@@ -1,0 +1,12 @@
+/.phpunit.cache
+/.phpunit.result.cache
+/.idea
+/.vscode
+/.env
+/vendor
+/node_modules
+/public/hot
+/storage/*.key
+/storage/logs/*.log
+.DS_Store
+Thumbs.db
