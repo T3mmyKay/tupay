@@ -8,6 +8,7 @@ use App\Domain\Swap\SwapService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SwapRequest;
 use App\Http\Resources\SwapResource;
+use App\Models\Swap;
 use App\Models\User;
 use Dedoc\Scramble\Attributes\Header;
 use Dedoc\Scramble\Attributes\HeaderParameter;
@@ -54,7 +55,7 @@ class SwapController extends Controller
             $user,
             $idempotencyKey,
             $requestHash,
-            function () use ($request, $user, $tokens, $swaps, $idempotencyKey, $requestHash) {
+            function () use ($request, $user, $tokens, $swaps, $idempotencyKey, $requestHash): Swap {
                 $token = $request->header('X-Elevated-Action-Token');
                 if (! is_string($token) || $token === '') {
                     abort(401, 'An elevated action token is required.');
@@ -74,7 +75,7 @@ class SwapController extends Controller
         );
 
         $response = (new SwapResource($result->swap))->response();
-        $response->setStatusCode($result->replayed ? 200 : 201);
+        $response->setStatusCode(200);
         $response->headers->set('Idempotent-Replayed', $result->replayed ? 'true' : 'false');
 
         return $response;
