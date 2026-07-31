@@ -42,6 +42,26 @@ class ApiStandardsTest extends TestCase
             ->assertJsonPath('code', 'AUTHENTICATION_REQUIRED');
     }
 
+    public function test_login_rate_limit_returns_the_standard_problem_contract(): void
+    {
+        $request = fn () => $this
+            ->withServerVariables(['REMOTE_ADDR' => '198.51.100.77'])
+            ->postJson('/api/v1/login', [
+                'email' => 'rate-limit-probe@tupay.test',
+                'password' => 'invalid-password',
+            ]);
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $request()->assertUnprocessable();
+        }
+
+        $request()
+            ->assertTooManyRequests()
+            ->assertHeader('Content-Type', 'application/problem+json')
+            ->assertHeader('Retry-After')
+            ->assertJsonPath('code', 'RATE_LIMIT_EXCEEDED');
+    }
+
     public function test_scramble_exports_the_versioned_contract(): void
     {
         $response = $this->getJson('/docs/api.json')->assertOk();
