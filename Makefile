@@ -33,4 +33,4 @@ verify:
 concurrency:
 	docker compose exec app php artisan migrate:fresh --seed --force
 	docker compose exec redis redis-cli FLUSHALL
-	CONCURRENCY_BASE_URL=http://localhost:8000 vendor/bin/phpunit --group concurrency
+	docker compose exec -e CONCURRENCY_BASE_URL=http://127.0.0.1:8000 app vendor/bin/phpunit --group concurrency
