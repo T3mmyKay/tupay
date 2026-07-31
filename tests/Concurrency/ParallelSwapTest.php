@@ -42,7 +42,7 @@ class ParallelSwapTest extends TestCase
         $sourceWalletId = $this->walletId($loginData['wallets'], 'NGN');
         $destinationWalletId = $this->walletId($loginData['wallets'], 'CNY');
         $amount = 100_000_000;
-        $totp = (new Google2FA())->getCurrentOtp('JBSWY3DPEHPK3PXP');
+        $totp = (new Google2FA)->getCurrentOtp('JBSWY3DPEHPK3PXP');
 
         $actionPayload = [
             'action' => 'swap',
@@ -109,24 +109,28 @@ class ParallelSwapTest extends TestCase
         self::assertSame(1, DB::table('swaps')->count());
 
         $negativeUserWallets = DB::table('wallets')
+            ->select('wallets.id')
             ->leftJoin('ledger_entries', 'ledger_entries.wallet_id', '=', 'wallets.id')
             ->where('wallets.type', 'USER')
             ->groupBy('wallets.id')
             ->havingRaw('COALESCE(SUM(ledger_entries.amount_subunits), 0) < 0')
+            ->get()
             ->count();
         self::assertSame(0, $negativeUserWallets);
 
         $unbalancedGroups = DB::table('ledger_entries')
+            ->select('ledger_entries.ledger_transaction_id', 'ledger_entries.currency')
             ->join('ledger_transactions', 'ledger_transactions.id', '=', 'ledger_entries.ledger_transaction_id')
             ->where('ledger_transactions.status', 'COMPLETED')
             ->groupBy('ledger_entries.ledger_transaction_id', 'ledger_entries.currency')
             ->havingRaw('SUM(ledger_entries.amount_subunits) <> 0')
+            ->get()
             ->count();
         self::assertSame(0, $unbalancedGroups);
     }
 
     /**
-     * @param list<array{id: string, currency: string}> $wallets
+     * @param  list<array{id: string, currency: string}>  $wallets
      */
     private function walletId(array $wallets, string $currency): string
     {

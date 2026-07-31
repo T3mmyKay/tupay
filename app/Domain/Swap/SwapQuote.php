@@ -9,6 +9,5 @@ final readonly class SwapQuote
         public string $effectiveRate,
         public int $spreadBasisPoints,
         public int $destinationAmountSubunits,
-    ) {
-    }
+    ) {}
 }

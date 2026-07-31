@@ -10,9 +10,7 @@ use JsonException;
 
 final class ElevatedActionTokenService
 {
-    public function __construct(private readonly ActionPayloadHasher $hasher)
-    {
-    }
+    public function __construct(private readonly ActionPayloadHasher $hasher) {}
 
     /** @param array<string, mixed> $actionPayload */
     public function issue(User $user, array $actionPayload): string

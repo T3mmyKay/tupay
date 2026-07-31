@@ -10,8 +10,9 @@ final class DistributedLockManager
 {
     /**
      * @template T
-     * @param list<string> $keys
-     * @param callable(): T $callback
+     *
+     * @param  list<string>  $keys
+     * @param  callable(): T  $callback
      * @return T
      */
     public function withLocks(array $keys, callable $callback): mixed
@@ -23,7 +24,7 @@ final class DistributedLockManager
 
         try {
             foreach ($keys as $key) {
-                $lock = Cache::store('redis')->lock($key, 10);
+                $lock = Cache::lock($key, 10);
                 if (! $lock->get()) {
                     throw new ResourceBusy('A conflicting financial operation is already in progress.');
                 }

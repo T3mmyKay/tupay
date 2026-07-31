@@ -2,7 +2,6 @@
 
 namespace App\Domain\Ledger;
 
-use App\Enums\Currency;
 use App\Enums\LedgerTransactionStatus;
 use App\Enums\LedgerTransactionType;
 use App\Models\LedgerTransaction;
@@ -13,8 +12,8 @@ use LogicException;
 final class LedgerService
 {
     /**
-     * @param list<array{wallet: Wallet, amount_subunits: int}> $postings
-     * @param array<string, mixed> $metadata
+     * @param  list<array{wallet: Wallet, amount_subunits: int}>  $postings
+     * @param  array<string, mixed>  $metadata
      */
     public function post(
         LedgerTransactionType $type,
@@ -37,11 +36,7 @@ final class LedgerService
                 throw new LogicException('Zero-value ledger entries are not permitted.');
             }
 
-            $currency = $posting['wallet']->currency;
-            if (! $currency instanceof Currency) {
-                throw new LogicException('Wallet currency is invalid.');
-            }
-
+            $currency = $posting['wallet']->currencyEnum();
             $totals[$currency->value] = ($totals[$currency->value] ?? 0) + $posting['amount_subunits'];
         }
 
@@ -58,14 +53,9 @@ final class LedgerService
         ]);
 
         foreach ($postings as $posting) {
-            $currency = $posting['wallet']->currency;
-            if (! $currency instanceof Currency) {
-                throw new LogicException('Wallet currency is invalid.');
-            }
-
             $transaction->entries()->create([
                 'wallet_id' => $posting['wallet']->getKey(),
-                'currency' => $currency,
+                'currency' => $posting['wallet']->currencyEnum(),
                 'amount_subunits' => $posting['amount_subunits'],
             ]);
         }

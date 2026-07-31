@@ -2,6 +2,4 @@
 
 namespace App\Domain\Swap;
 
-final class InsufficientFunds extends InvalidSwap
-{
-}
+final class InsufficientFunds extends InvalidSwap {}

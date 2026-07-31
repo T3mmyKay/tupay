@@ -2,6 +2,4 @@
 
 namespace App\Domain\Swap;
 
-final class ResourceBusy extends InvalidSwap
-{
-}
+final class ResourceBusy extends InvalidSwap {}

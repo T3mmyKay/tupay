@@ -22,6 +22,6 @@ class BankersRoundingTest extends TestCase
     #[DataProvider('values')]
     public function test_it_uses_round_half_even(string $value, int $expected): void
     {
-        self::assertSame($expected, (new BankersRounding())->toInteger($value));
+        self::assertSame($expected, (new BankersRounding)->toInteger($value));
     }
 }

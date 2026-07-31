@@ -2,6 +2,4 @@
 
 namespace App\Domain\Swap;
 
-final class FxRateUnavailable extends InvalidSwap
-{
-}
+final class FxRateUnavailable extends InvalidSwap {}

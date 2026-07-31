@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use LogicException;
 
 class Wallet extends Model
 {
@@ -29,6 +30,21 @@ class Wallet extends Model
             'type' => WalletType::class,
             'lock_version' => 'integer',
         ];
+    }
+
+    public function currencyEnum(): Currency
+    {
+        $currency = $this->getAttribute('currency');
+
+        if ($currency instanceof Currency) {
+            return $currency;
+        }
+
+        if (is_string($currency)) {
+            return Currency::from($currency);
+        }
+
+        throw new LogicException('Wallet currency is invalid.');
     }
 
     /** @return BelongsTo<User, $this> */

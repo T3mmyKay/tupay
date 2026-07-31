@@ -12,6 +12,7 @@ use App\Models\Wallet;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
 use Illuminate\Support\Facades\Redis;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class SettlementWebhookTest extends TestCase
@@ -63,7 +64,7 @@ class SettlementWebhookTest extends TestCase
     }
 
     /** @param array<string, string> $payload */
-    private function sendSignedWebhook(array $payload): \Illuminate\Testing\TestResponse
+    private function sendSignedWebhook(array $payload): TestResponse
     {
         $body = json_encode($payload, JSON_THROW_ON_ERROR);
         $signature = hash_hmac('sha256', $body, (string) config('services.settlement.webhook_secret'));

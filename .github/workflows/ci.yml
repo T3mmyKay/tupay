@@ -80,6 +80,10 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
+      - name: Report assessment-constrained dependency advisories
+        continue-on-error: true
+        run: composer audit --format=summary
+
       - name: Configure application
         run: |
           cp .env.example .env
@@ -101,7 +105,7 @@ jobs:
       - name: Reset state for parallel test
         run: |
           php artisan migrate:fresh --seed --force
-          redis-cli -h 127.0.0.1 FLUSHALL
+          php -r '$redis = new Redis(); $redis->connect("127.0.0.1", 6379); $redis->flushAll();'
 
       - name: Start multi-worker HTTP server
         run: |

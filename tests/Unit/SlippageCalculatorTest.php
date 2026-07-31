@@ -22,6 +22,6 @@ class SlippageCalculatorTest extends TestCase
     #[DataProvider('tiers')]
     public function test_it_calculates_progressive_spread(int $amount, int $basisPoints): void
     {
-        self::assertSame($basisPoints, (new SlippageCalculator())->basisPoints($amount));
+        self::assertSame($basisPoints, (new SlippageCalculator)->basisPoints($amount));
     }
 }

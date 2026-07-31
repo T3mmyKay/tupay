@@ -33,7 +33,7 @@ class LedgerController extends Controller
         return response()->json([
             'wallet' => [
                 'id' => (string) $wallet->getKey(),
-                'currency' => $wallet->currency->value,
+                'currency' => $wallet->currencyEnum()->value,
                 'balance_subunits' => $balances->balance($wallet),
             ],
             'entries' => $entries,

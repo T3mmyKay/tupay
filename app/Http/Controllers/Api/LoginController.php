@@ -25,13 +25,16 @@ class LoginController extends Controller
         $user->tokens()->delete();
         $token = $user->createToken('tupay-api')->plainTextToken;
 
-        $wallets = $user->wallets()->orderBy('currency')->get()->map(static function ($wallet) use ($balances): array {
-            return [
+        /** @var list<array{id: string, currency: string, balance_subunits: int}> $wallets */
+        $wallets = [];
+
+        foreach ($user->wallets()->orderBy('currency')->get() as $wallet) {
+            $wallets[] = [
                 'id' => (string) $wallet->getKey(),
-                'currency' => $wallet->currency->value,
+                'currency' => $wallet->currencyEnum()->value,
                 'balance_subunits' => $balances->balance($wallet),
             ];
-        })->values();
+        }
 
         return response()->json([
             'token' => $token,
