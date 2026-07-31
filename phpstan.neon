@@ -10,4 +10,3 @@ parameters:
     excludePaths:
         analyse:
             - bootstrap/cache/*
-    checkMissingIterableValueType: false
