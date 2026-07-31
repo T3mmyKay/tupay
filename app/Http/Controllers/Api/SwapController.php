@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Domain\Security\ElevatedActionTokenService;
+use App\Domain\Security\InvalidElevatedActionToken;
 use App\Domain\Swap\SwapIdempotencyService;
 use App\Domain\Swap\SwapService;
 use App\Http\Controllers\Controller;
@@ -58,7 +59,7 @@ class SwapController extends Controller
             function () use ($request, $user, $tokens, $swaps, $idempotencyKey, $requestHash): Swap {
                 $token = $request->header('X-Elevated-Action-Token');
                 if (! is_string($token) || $token === '') {
-                    abort(401, 'An elevated action token is required.');
+                    throw new InvalidElevatedActionToken('An elevated action token is required.');
                 }
 
                 $tokens->consume($user, $request->actionPayload(), $token);
