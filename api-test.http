@@ -1,16 +1,21 @@
-@baseUrl = http://localhost:8000
+@baseUrl = http://localhost:8000/api/v1
 @token = paste-sanctum-token
 @eat = paste-elevated-action-token
 @sourceWalletId = paste-ngn-wallet-id
 @destinationWalletId = paste-cny-wallet-id
 @totp = paste-current-six-digit-totp
 @providerReference = paste-provider-reference
-@webhookSignature = paste-hmac-sha256-of-exact-json-body
+@idempotencyKey = swap-018f7f32-15af-7e4a-8f51-2ad8f7bf6c88
+@requestId = request-018f7f32-15af-7e4a-8f51-2ad8f7bf6c88
+@eventId = 018f7f32-15af-7e4a-8f51-2ad8f7bf6c88
+@webhookTimestamp = paste-current-unix-timestamp
+@webhookSignature = paste-hmac-sha256-of-timestamp-dot-exact-json-body
 
 ### Login
-POST {{baseUrl}}/api/login
+POST {{baseUrl}}/login
 Accept: application/json
 Content-Type: application/json
+X-Request-ID: {{requestId}}
 
 {
   "email": "candidate@tupay.test",
@@ -18,10 +23,11 @@ Content-Type: application/json
 }
 
 ### Create a single-use action-bound EAT
-POST {{baseUrl}}/api/2fa/challenge
+POST {{baseUrl}}/2fa/challenge
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer {{token}}
+X-Request-ID: {{requestId}}
 
 {
   "totp_code": "{{totp}}",
@@ -34,11 +40,13 @@ Authorization: Bearer {{token}}
 }
 
 ### Execute swap
-POST {{baseUrl}}/api/swap
+POST {{baseUrl}}/swap
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer {{token}}
 X-Elevated-Action-Token: {{eat}}
+Idempotency-Key: {{idempotencyKey}}
+X-Request-ID: {{requestId}}
 
 {
   "source_wallet_id": "{{sourceWalletId}}",
@@ -46,12 +54,13 @@ X-Elevated-Action-Token: {{eat}}
   "amount_subunits": 100000000
 }
 
-### Replay the same EAT: expected 401
-POST {{baseUrl}}/api/swap
+### Retry the same request: expected 200 and Idempotent-Replayed: true
+POST {{baseUrl}}/swap
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer {{token}}
 X-Elevated-Action-Token: {{eat}}
+Idempotency-Key: {{idempotencyKey}}
 
 {
   "source_wallet_id": "{{sourceWalletId}}",
@@ -59,16 +68,39 @@ X-Elevated-Action-Token: {{eat}}
   "amount_subunits": 100000000
 }
 
-### Read wallet ledger
-GET {{baseUrl}}/api/ledger/{{sourceWalletId}}?per_page=20
+### Reuse the consumed EAT with a new idempotency key: expected 401
+POST {{baseUrl}}/swap
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+X-Elevated-Action-Token: {{eat}}
+Idempotency-Key: another-swap-request-key
+
+{
+  "source_wallet_id": "{{sourceWalletId}}",
+  "destination_wallet_id": "{{destinationWalletId}}",
+  "amount_subunits": 100000000
+}
+
+### Read wallet ledger with cursor pagination
+GET {{baseUrl}}/ledger/{{sourceWalletId}}?per_page=20
 Accept: application/json
 Authorization: Bearer {{token}}
 
 ### Settlement webhook
-# Compute HMAC-SHA256 over the exact compact JSON body with SETTLEMENT_WEBHOOK_SECRET.
-POST {{baseUrl}}/api/webhooks/settlement
+# Compute HMAC-SHA256 over: {{webhookTimestamp}} + "." + the exact compact JSON body.
+POST {{baseUrl}}/webhooks/settlement
 Accept: application/json
 Content-Type: application/json
-X-Tupay-Signature: {{webhookSignature}}
+X-Tupay-Timestamp: {{webhookTimestamp}}
+X-Tupay-Signature: sha256={{webhookSignature}}
+X-Request-ID: {{requestId}}
 
-{"provider_reference":"{{providerReference}}","status":"COMPLETED"}
+{"event_id":"{{eventId}}","provider_reference":"{{providerReference}}","status":"COMPLETED","occurred_at":"2026-07-31T21:44:00+01:00"}
+
+### OpenAPI JSON
+GET http://localhost:8000/docs/api.json
+Accept: application/json
+
+### Interactive API documentation
+GET http://localhost:8000/docs/api
