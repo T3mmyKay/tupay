@@ -45,7 +45,7 @@ class ProcessSettlementWebhook implements ShouldQueue
             }
 
             $swap = Swap::query()
-                ->where('provider_reference', $event->provider_reference)
+                ->where('provider_reference', $event->providerReference())
                 ->lockForUpdate()
                 ->first();
 
@@ -53,12 +53,8 @@ class ProcessSettlementWebhook implements ShouldQueue
                 throw new RuntimeException('Settlement references an unknown swap.');
             }
 
-            $incomingStatus = $event->status;
-            $currentStatus = $swap->status;
-
-            if (! $incomingStatus instanceof SwapStatus || ! $currentStatus instanceof SwapStatus) {
-                throw new RuntimeException('Settlement status is invalid.');
-            }
+            $incomingStatus = $event->statusEnum();
+            $currentStatus = $swap->statusEnum();
 
             if ($currentStatus->isTerminal() || $incomingStatus->rank() <= $currentStatus->rank()) {
                 $event->update(['processed_at' => now()]);
@@ -78,7 +74,7 @@ class ProcessSettlementWebhook implements ShouldQueue
 
     private function completeSettlement(Swap $swap, LedgerService $ledger): void
     {
-        if ($swap->settlement_ledger_transaction_id !== null) {
+        if ($swap->settlementLedgerTransactionId() !== null) {
             $swap->update(['status' => SwapStatus::COMPLETED]);
 
             return;
@@ -94,7 +90,8 @@ class ProcessSettlementWebhook implements ShouldQueue
             throw new RuntimeException('The CNY liquidity wallet is not configured.');
         }
 
-        $walletIds = [$swap->destination_wallet_id, $liquidityId];
+        $destinationWalletId = $swap->destinationWalletId();
+        $walletIds = [$destinationWalletId, $liquidityId];
         sort($walletIds, SORT_STRING);
 
         /** @var Collection<int, Wallet> $wallets */
@@ -105,22 +102,23 @@ class ProcessSettlementWebhook implements ShouldQueue
             ->get();
 
         /** @var Wallet|null $destination */
-        $destination = $wallets->firstWhere('id', $swap->destination_wallet_id);
+        $destination = $wallets->firstWhere('id', $destinationWalletId);
         /** @var Wallet|null $liquidity */
         $liquidity = $wallets->firstWhere('id', $liquidityId);
 
-        if ($destination === null || $liquidity === null || $destination->currency !== Currency::CNY) {
+        if ($destination === null || $liquidity === null || $destination->currencyEnum() !== Currency::CNY) {
             throw new RuntimeException('Settlement wallets are invalid.');
         }
 
         Wallet::query()->whereIn('id', $walletIds)->increment('lock_version');
 
+        $destinationAmount = $swap->destinationAmountSubunits();
         $settlementTransaction = $ledger->post(LedgerTransactionType::SETTLEMENT_CREDIT, [
-            ['wallet' => $liquidity, 'amount_subunits' => -$swap->destination_amount_subunits],
-            ['wallet' => $destination, 'amount_subunits' => $swap->destination_amount_subunits],
+            ['wallet' => $liquidity, 'amount_subunits' => -$destinationAmount],
+            ['wallet' => $destination, 'amount_subunits' => $destinationAmount],
         ], [
             'swap_id' => (string) $swap->getKey(),
-            'provider_reference' => $swap->provider_reference,
+            'provider_reference' => $swap->providerReference(),
         ]);
 
         $swap->update([
