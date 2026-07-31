@@ -6,6 +6,7 @@ use App\Domain\Ledger\WalletBalanceService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Models\User;
+use App\Models\Wallet;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -25,13 +26,20 @@ class LoginController extends Controller
         $user->tokens()->delete();
         $token = $user->createToken('tupay-api')->plainTextToken;
 
-        $wallets = $user->wallets()->orderBy('currency')->get()->map(static function ($wallet) use ($balances): array {
-            return [
+        /** @var list<array{id: string, currency: string, balance_subunits: int}> $wallets */
+        $wallets = [];
+
+        foreach ($user->wallets()->orderBy('currency')->get() as $wallet) {
+            if (! $wallet instanceof Wallet) {
+                continue;
+            }
+
+            $wallets[] = [
                 'id' => (string) $wallet->getKey(),
-                'currency' => $wallet->currency->value,
+                'currency' => $wallet->currencyEnum()->value,
                 'balance_subunits' => $balances->balance($wallet),
             ];
-        })->values();
+        }
 
         return response()->json([
             'token' => $token,
