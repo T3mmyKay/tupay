@@ -31,11 +31,14 @@ final class SwapService
             'swap:wallet:'.$sourceWalletId,
             'swap:wallet:'.$destinationWalletId,
         ];
+        $quoteService = $this->quotes;
+        $balanceService = $this->balances;
+        $ledgerService = $this->ledger;
 
-        return $this->locks->withLocks($lockKeys, function () use ($user, $sourceWalletId, $destinationWalletId, $amountSubunits): Swap {
-            $quote = $this->quotes->quoteNgnToCny($amountSubunits);
+        return $this->locks->withLocks($lockKeys, function () use ($user, $sourceWalletId, $destinationWalletId, $amountSubunits, $quoteService, $balanceService, $ledgerService): Swap {
+            $quote = $quoteService->quoteNgnToCny($amountSubunits);
 
-            return DB::transaction(function () use ($user, $sourceWalletId, $destinationWalletId, $amountSubunits, $quote): Swap {
+            return DB::transaction(function () use ($user, $sourceWalletId, $destinationWalletId, $amountSubunits, $quote, $balanceService, $ledgerService): Swap {
                 DB::statement('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
 
                 $clearingId = Wallet::query()
@@ -69,25 +72,29 @@ final class SwapService
                     throw new InvalidSwap('One or more participating wallets do not exist.');
                 }
 
-                if ((string) $source->user_id !== (string) $user->getKey() || (string) $destination->user_id !== (string) $user->getKey()) {
+                $userId = (string) $user->getKey();
+                $sourceOwnerId = (string) $source->getAttribute('user_id');
+                $destinationOwnerId = (string) $destination->getAttribute('user_id');
+
+                if ($sourceOwnerId !== $userId || $destinationOwnerId !== $userId) {
                     throw new InvalidSwap('Both wallets must belong to the authenticated user.');
                 }
 
-                if ($source->currency !== Currency::NGN || $destination->currency !== Currency::CNY) {
+                if ($source->currencyEnum() !== Currency::NGN || $destination->currencyEnum() !== Currency::CNY) {
                     throw new InvalidSwap('Only NGN to CNY swaps are supported.');
                 }
 
                 Wallet::query()->whereIn('id', $walletIds)->increment('lock_version');
 
-                if ($this->balances->balance($source) < $amountSubunits) {
+                if ($balanceService->balance($source) < $amountSubunits) {
                     throw new InsufficientFunds('The source wallet has insufficient funds.');
                 }
 
-                $debitTransaction = $this->ledger->post(LedgerTransactionType::SWAP_DEBIT, [
+                $debitTransaction = $ledgerService->post(LedgerTransactionType::SWAP_DEBIT, [
                     ['wallet' => $source, 'amount_subunits' => -$amountSubunits],
                     ['wallet' => $clearing, 'amount_subunits' => $amountSubunits],
                 ], [
-                    'user_id' => (string) $user->getKey(),
+                    'user_id' => $userId,
                     'source_wallet_id' => $sourceWalletId,
                     'destination_wallet_id' => $destinationWalletId,
                 ]);
@@ -96,7 +103,7 @@ final class SwapService
 
                 return Swap::query()->create([
                     'id' => $swapId,
-                    'user_id' => $user->getKey(),
+                    'user_id' => $userId,
                     'source_wallet_id' => $sourceWalletId,
                     'destination_wallet_id' => $destinationWalletId,
                     'source_amount_subunits' => $amountSubunits,
